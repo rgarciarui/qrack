@@ -58,7 +58,12 @@ QPager::QPager(QInterfaceEngine eng, bitLenInt qBitCount, bitCapInt initState, q
     }
 
     if (deviceIDs.size() == 0) {
-        deviceIDs.push_back(-1);
+        int defDevId = OCLEngine::Instance()->GetDefaultDeviceID();
+        int devCount = OCLEngine::Instance()->GetDeviceCount();
+        for (int i = 0; i < devCount; i++) {
+            deviceIDs.push_back(i);
+        }
+        std::swap(deviceIDs[defDevId], deviceIDs[0]);
     }
 
     SetQubitCount(qubitCount);
