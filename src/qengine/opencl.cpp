@@ -515,7 +515,7 @@ void QEngineOCL::SetPermutation(bitCapInt perm, complex phaseFac)
 
     // If "permutationAmp" amp is in (read-only) use, this method complicates supersedes that application anyway.
 
-    if (phaseFac == complex(-999.0, -999.0)) {
+    if (phaseFac == CMPLX_DEFAULT_ARG) {
         permutationAmp = GetNonunitaryPhase();
     } else {
         permutationAmp = phaseFac;
