@@ -350,6 +350,7 @@ public:
     }
     void OptimizeTargets()
     {
+        TryMakeGhzControl(false);
         OptimizeBuffer(targetOfShards, &QEngineShard::GetControlsShards, &QEngineShard::AddPhaseAngles, true);
     }
     void OptimizeAntiControls()
@@ -359,6 +360,7 @@ public:
     }
     void OptimizeAntiTargets()
     {
+        TryMakeGhzControl(true);
         OptimizeBuffer(
             antiTargetOfShards, &QEngineShard::GetAntiControlsShards, &QEngineShard::AddAntiPhaseAngles, true);
     }
@@ -623,12 +625,14 @@ public:
     {
         ShardToPhaseMap::iterator phaseShard;
 
+        TryMakeGhzControl(false);
         for (phaseShard = targetOfShards.begin(); phaseShard != targetOfShards.end(); phaseShard++) {
             if (phaseShard->second->isInvert) {
                 return true;
             }
         }
 
+        TryMakeGhzControl(true);
         for (phaseShard = antiTargetOfShards.begin(); phaseShard != antiTargetOfShards.end(); phaseShard++) {
             if (phaseShard->second->isInvert) {
                 return true;
@@ -636,6 +640,49 @@ public:
         }
 
         return false;
+    }
+
+    void TryMakeGhzControl(bool anti)
+    {
+        if (!isPlusMinus) {
+            return;
+        }
+
+        ShardToPhaseMap& phaseMap = anti ? antiTargetOfShards : targetOfShards;
+
+        ShardToPhaseMap::iterator phaseShard;
+        PhaseShardPtr buffer;
+        for (phaseShard = phaseMap.begin(); phaseShard != phaseMap.end(); phaseShard++) {
+            buffer = phaseShard->second;
+            if (buffer->isInvert && IS_ARG_0(buffer->cmplxDiff) && IS_ARG_0(buffer->cmplxSame)) {
+                break;
+            }
+        }
+
+        if (phaseShard == phaseMap.end()) {
+            return;
+        }
+
+        QEngineShardPtr partner = phaseShard->first;
+
+        if (partner->isPlusMinus) {
+            return;
+        }
+
+        isPlusMinus = !isPlusMinus;
+        partner->isPlusMinus = !partner->isPlusMinus;
+
+        phaseMap.erase(phaseShard);
+
+        if (anti) {
+            antiControlsShards[partner] = buffer;
+            partner->RemovePhaseAntiTarget(this);
+            partner->antiTargetOfShards[this] = buffer;
+        } else {
+            controlsShards[partner] = buffer;
+            partner->RemovePhaseTarget(this);
+            partner->targetOfShards[this] = buffer;
+        }
     }
 
     bool IsInvert() { return IsInvertTarget() || IsInvertControl(); }
