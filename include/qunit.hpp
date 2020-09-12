@@ -642,30 +642,49 @@ public:
         return false;
     }
 
+    bool IsInvertControlBesides(QEngineShardPtr controlShard)
+    {
+        ShardToPhaseMap::iterator phaseShard;
+
+        for (phaseShard = controlsShards.begin(); phaseShard != controlsShards.end(); phaseShard++) {
+            if (phaseShard->second->isInvert && (phaseShard->first != controlShard)) {
+                return true;
+            }
+        }
+
+        for (phaseShard = antiControlsShards.begin(); phaseShard != antiControlsShards.end(); phaseShard++) {
+            if (phaseShard->second->isInvert && (phaseShard->first != controlShard)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     void TryMakeGhzControl(bool anti)
     {
-        if (!isPlusMinus) {
+        if (!isPlusMinus || IsInvertControl()) {
             return;
         }
 
         ShardToPhaseMap& phaseMap = anti ? antiTargetOfShards : targetOfShards;
 
         ShardToPhaseMap::iterator phaseShard;
+        QEngineShardPtr partner;
         PhaseShardPtr buffer;
         for (phaseShard = phaseMap.begin(); phaseShard != phaseMap.end(); phaseShard++) {
+            partner = phaseShard->first;
             buffer = phaseShard->second;
-            if (buffer->isInvert && IS_ARG_0(buffer->cmplxDiff) && IS_ARG_0(buffer->cmplxSame)) {
+            if (!partner->isPlusMinus && buffer->isInvert && IS_ARG_0(buffer->cmplxDiff) &&
+                IS_ARG_0(buffer->cmplxSame)) {
+                if (partner->IsInvertControlBesides(this)) {
+                    return;
+                }
                 break;
             }
         }
 
         if (phaseShard == phaseMap.end()) {
-            return;
-        }
-
-        QEngineShardPtr partner = phaseShard->first;
-
-        if (partner->isPlusMinus) {
             return;
         }
 
