@@ -642,18 +642,18 @@ public:
         return false;
     }
 
-    bool IsInvertControlBesides(QEngineShardPtr controlShard)
+    bool IsControlBesides(QEngineShardPtr controlShard)
     {
         ShardToPhaseMap::iterator phaseShard;
 
         for (phaseShard = controlsShards.begin(); phaseShard != controlsShards.end(); phaseShard++) {
-            if (phaseShard->second->isInvert && (phaseShard->first != controlShard)) {
+            if (phaseShard->first != controlShard) {
                 return true;
             }
         }
 
         for (phaseShard = antiControlsShards.begin(); phaseShard != antiControlsShards.end(); phaseShard++) {
-            if (phaseShard->second->isInvert && (phaseShard->first != controlShard)) {
+            if (phaseShard->first != controlShard) {
                 return true;
             }
         }
@@ -663,28 +663,17 @@ public:
 
     void TryMakeGhzControl(bool anti)
     {
-        if (!isPlusMinus || IsInvertControl()) {
+        if (!(anti && targetOfShards.size() && (antiTargetOfShards.size() == 1U)) ||
+            !(!anti && (targetOfShards.size() == 1U) && antiTargetOfShards.size())) {
             return;
         }
 
         ShardToPhaseMap& phaseMap = anti ? antiTargetOfShards : targetOfShards;
+        ShardToPhaseMap::iterator phaseShard = phaseMap.begin();
+        QEngineShardPtr partner = phaseShard->first;
+        PhaseShardPtr buffer = phaseShard->second;
 
-        ShardToPhaseMap::iterator phaseShard;
-        QEngineShardPtr partner;
-        PhaseShardPtr buffer;
-        for (phaseShard = phaseMap.begin(); phaseShard != phaseMap.end(); phaseShard++) {
-            partner = phaseShard->first;
-            buffer = phaseShard->second;
-            if (!partner->isPlusMinus && buffer->isInvert && IS_ARG_0(buffer->cmplxDiff) &&
-                IS_ARG_0(buffer->cmplxSame)) {
-                if (partner->IsInvertControlBesides(this)) {
-                    return;
-                }
-                break;
-            }
-        }
-
-        if (phaseShard == phaseMap.end()) {
+        if (IS_ARG_0(buffer->cmplxDiff) && IS_ARG_0(buffer->cmplxSame) && !partner->IsControlBesides(this)) {
             return;
         }
 
